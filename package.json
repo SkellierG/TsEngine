@@ -1,0 +1,26 @@
+{
+  "name": "tsengine",
+  "version": "1.0.0",
+  "main": "./dist/main.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc && vite build",
+    "dev": "concurrently \"tsc --watch\" \"vite\"",
+    "start": "node dist/main.js",
+    "vite": "vite"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "obj-file-parser": "^0.6.2",
+    "typescript": "5.7.2",
+    "vite": "^6.0.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "@types/obj-file-parser": "^0.5.2",
+    "concurrently": "^9.1.2"
+  }
+}
