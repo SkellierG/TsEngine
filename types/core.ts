@@ -86,18 +86,18 @@ export class Entity implements EntityClass {
     }
 
     computeModelMatrix(): Matrix4x4 {
-        const translated = TransformVec4.translate(this._position.x, this._position.y, this._position.z);
-        const rotated = TransformVec4.rotate(this._rotation.x, this._rotation.y, this._rotation.z);
         const scaled = TransformVec4.scale(this._scale.x, this._scale.y, this._scale.z);
-        const reclefted = TransformVec4.reflect(this._reflection.x, this._reflection.y, this._reflection.z);
+        const rotated = TransformVec4.rotate(this._rotation.x, this._rotation.y, this._rotation.z);
         //TODO
         //const sheared = TransformVec4.shearing(this._shear.x, this._shear.y, this._shear.z);
-
-        const finalMatrix = Matrix4x4Util.matrix4x4(Matrix4x4Util.matrix4x4(Matrix4x4Util.matrix4x4(translated, rotated), scaled), reclefted);
-
+        const reclefted = TransformVec4.reflect(this._reflection.x, this._reflection.y, this._reflection.z);
+        const translated = TransformVec4.translate(this._position.x, this._position.y, this._position.z);
+    
+        const finalMatrix = Matrix4x4Util.matrix4x4(Matrix4x4Util.matrix4x4(Matrix4x4Util.matrix4x4(scaled, rotated), reclefted),translated);
+    
         this._modelMatrix = finalMatrix;
         return finalMatrix;
-    }
+    }    
 }
 
 export class Camera extends Entity implements CameraClass {
@@ -156,10 +156,10 @@ export class Scene implements SceneClass {
         this.addEntity(...entities);
         this.addCamera(...cameras);
 
-        if (cameras.length > 0) {
-            this._activeCamera = cameras.includes(activeCamera) ? activeCamera : cameras[0];
+        if(activeCamera !== "") {
+            this._activeCamera = this._cameras.has(activeCamera) ? activeCamera : cameras[0] || "";
         } else {
-            this._activeCamera = "";
+            this._activeCamera = cameras.includes(activeCamera) ? activeCamera : cameras[0] || "";
         }
     }
 
@@ -197,7 +197,6 @@ export class Scene implements SceneClass {
     }
 
     addCamera(...newCameras: string[]) {
-        console.log(this._cameras);
         newCameras.forEach((id) => {
             this._cameras.set(id, true);
         });
