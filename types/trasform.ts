@@ -1,10 +1,10 @@
 import type { Matrix3x3, Matrix4x4, Vec3, Vec4 } from "./interfaces/common";
 import { TransformClass, type ReflectStrategy, type RotateAxisStrategy, type RotateStrategy, type ScaleStrategy, type ShearingStrategy, type TranslateStrategy } from "./interfaces/transform";
-import { Matrix3x3xMatrix3x3, Matrix4x4xMatrix4x4, vec3xMatrix3x3, vec4xMatrix4x4 } from "./utils";
+import { Matrix3x3Util, Matrix4x4Util } from "./utils";
 
 class TransformVec4Class extends TransformClass<Matrix4x4> {
     rotate: RotateStrategy<Matrix4x4> = (alpha: number, beta: number, upsilon: number): Matrix4x4 => {
-        return Matrix4x4xMatrix4x4(Matrix4x4xMatrix4x4(this.roll(alpha), this.pitch(beta)), this.yaw(upsilon))
+        return Matrix4x4Util.matrix4x4(Matrix4x4Util.matrix4x4(this.roll(alpha), this.pitch(beta)), this.yaw(upsilon))
     }
 
     roll: RotateAxisStrategy<Matrix4x4> = (alpha: number): Matrix4x4 => {
@@ -72,7 +72,7 @@ export const TransformVec4: TransformClass<Matrix4x4> = new TransformVec4Class()
 
 class TransformVec3Class extends TransformClass<Matrix3x3> {
     rotate: RotateStrategy<Matrix3x3> = (alpha: number, beta: number, upsilon: number): Matrix3x3 => {
-        return Matrix3x3xMatrix3x3(Matrix3x3xMatrix3x3(this.roll(alpha), this.pitch(beta)), this.yaw(upsilon))
+        return Matrix3x3Util.matrix3x3(Matrix3x3Util.matrix3x3(this.roll(alpha), this.pitch(beta)), this.yaw(upsilon))
     }
     roll: RotateAxisStrategy<Matrix3x3> = (alpha: number): Matrix3x3 => {
         const mat: Matrix3x3 = [[1, 0, 0],

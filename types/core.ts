@@ -1,12 +1,11 @@
 import type { Vec3, Matrix4x4 } from "./interfaces/common";
 import type { SceneClass, CameraClass, CameraProps, EntityClass, EntityProps, SceneProps } from "./interfaces/core";
-import type { TsModels } from "./interfaces/TsModels";
 import { TransformVec4 } from "./trasform";
-import { Matrix4x4xMatrix4x4 } from "./utils";
-import { hash } from 'node:crypto';
+import { Matrix4x4Util } from "./utils";
 
 export class Entity implements EntityClass {
-    protected _model: string;
+    protected _id: string;
+    protected _model?: string;
     protected _position: Vec3;
     protected _rotation: Vec3;
     protected _scale: Vec3;
@@ -16,6 +15,7 @@ export class Entity implements EntityClass {
 
     constructor(props: EntityProps) {
         const {
+            id = crypto.randomUUID(),
             model,
             position = { x: 0, y: 0, z: 0 },
             rotation = { x: 0, y: 0, z: 0 },
@@ -25,6 +25,7 @@ export class Entity implements EntityClass {
             shear = { x: 0, y: 0, z: 0 }
         } = props;
 
+        this._id = id;
         this._model = model;
         this._position = position;
         this._rotation = rotation;
@@ -34,7 +35,11 @@ export class Entity implements EntityClass {
         this._modelMatrix = this.computeModelMatrix();
     }
 
-    get model(): string {
+    get id(): string {
+        return this._id;
+    }
+
+    get model(): string | undefined {
         return this._model;
     }
     set model(hash: string) {
@@ -44,37 +49,37 @@ export class Entity implements EntityClass {
     get position(): Vec3 {
         return this._position;
     }
-    set position(vec: Vec3) {
-        this._position = vec;
+    set position(vec: Partial<Vec3>) {
+        Object.assign(this._position, vec);
     }
-
+    
     get rotation(): Vec3 {
         return this._rotation;
     }
-    set rotation(vec: Vec3) {
-        this._rotation = vec;
+    set rotation(vec: Partial<Vec3>) {
+        Object.assign(this._rotation, vec);
     }
     
     get scale(): Vec3 {
         return this._scale;
     }
-    set scale(vec: Vec3) {
-        this._scale = vec;
+    set scale(vec: Partial<Vec3>) {
+        Object.assign(this._scale, vec);
     }
-
-    get reflection(): { x:boolean, y:boolean, z: boolean } {
+    
+    get reflection(): { x: boolean, y: boolean, z: boolean } {
         return this._reflection;
     }
-    set reflection(vec: { x:boolean, y:boolean, z: boolean }) {
-        this._reflection = vec;
+    set reflection(vec: Partial<{ x: boolean, y: boolean, z: boolean }>) {
+        Object.assign(this._reflection, vec);
     }
-
+    
     get shear(): Vec3 {
         return this._shear;
     }
-    set shear(vec: Vec3) {
-        this._shear = vec;
-    }
+    set shear(vec: Partial<Vec3>) {
+        Object.assign(this._shear, vec);
+    }    
 
     get modelMatrix(): Matrix4x4 {
         return this._modelMatrix;
@@ -88,8 +93,9 @@ export class Entity implements EntityClass {
         //TODO
         //const sheared = TransformVec4.shearing(this._shear.x, this._shear.y, this._shear.z);
 
-        const finalMatrix = Matrix4x4xMatrix4x4(Matrix4x4xMatrix4x4(Matrix4x4xMatrix4x4(translated, rotated), scaled), reclefted);
+        const finalMatrix = Matrix4x4Util.matrix4x4(Matrix4x4Util.matrix4x4(Matrix4x4Util.matrix4x4(translated, rotated), scaled), reclefted);
 
+        this._modelMatrix = finalMatrix;
         return finalMatrix;
     }
 }
@@ -142,11 +148,12 @@ export class Scene implements SceneClass {
     protected _activeCamera: string;
 
     constructor(props: SceneProps) {
-        const { entities = [], cameras = [], activeCamera = "" } = props
+        const { entities = [], cameras = [], activeCamera = "" } = props;
 
         this._entities = new Map();
-        this.addEntity(...entities);
         this._cameras = new Map();
+
+        this.addEntity(...entities);
         this.addCamera(...cameras);
 
         if (cameras.length > 0) {
@@ -160,25 +167,28 @@ export class Scene implements SceneClass {
         return Array.from(this._entities.values());
     }
 
+    getEntityById(id: string): EntityClass | undefined {
+        return this._entities.get(id);
+    }
+
     addEntity(...newEntities: EntityClass[]) {
         newEntities.forEach((entity) => {
-            const hashed = hash('sha256', entity.model)
-            if (!this._entities.has(hashed)) {
-                this._entities.set(hashed, entity);
+            if (!this._entities.has(entity.id)) {
+                this._entities.set(entity.id, entity);
 
                 if (entity instanceof Camera) {
-                    this._cameras.set(hashed, true);
+                    this._cameras.set(entity.id, true);
                 }
             }
         });
     }
 
-    deleteEntity(hash: string) {
-        if(this._entities.has(hash)) {
-            if (this._cameras.has(hash)) {
-                this.deleteCamera(hash)
+    deleteEntity(id: string) {
+        if (this._entities.has(id)) {
+            if (this._cameras.has(id)) {
+                this.deleteCamera(id);
             }
-            this._entities.delete(hash);
+            this._entities.delete(id);
         }
     }
 
@@ -187,17 +197,18 @@ export class Scene implements SceneClass {
     }
 
     addCamera(...newCameras: string[]) {
-        newCameras.forEach((hash) => {
-            this._cameras.set(hash, true);
+        console.log(this._cameras);
+        newCameras.forEach((id) => {
+            this._cameras.set(id, true);
         });
     }
 
-    deleteCamera(hash: string) {
-        if (this._cameras.has(hash)) {
-            this._cameras.delete(hash);
-            this._entities.delete(hash);
+    deleteCamera(id: string) {
+        if (this._cameras.has(id)) {
+            this._cameras.delete(id);
+            this._entities.delete(id);
 
-            if (this._activeCamera === hash) {
+            if (this._activeCamera === id) {
                 this._activeCamera = this.cameras.length > 0 ? this.cameras[0] : "";
             }
         }
@@ -207,9 +218,23 @@ export class Scene implements SceneClass {
         return this._activeCamera;
     }
 
-    set activeCamera(hash: string) {
-        if (this._cameras.has(hash)) {
-            this._activeCamera = hash;
+    set activeCamera(id: string) {
+        if (this._cameras.has(id)) {
+            this._activeCamera = id;
+        }
+    }
+
+    switchToNextCamera() {
+        if (this._cameras.size > 1) {
+            const index = this.cameras.indexOf(this._activeCamera);
+            this._activeCamera = this.cameras[(index + 1) % this.cameras.length];
+        }
+    }
+
+    switchToPreviousCamera() {
+        if (this._cameras.size > 1) {
+            const index = this.cameras.indexOf(this._activeCamera);
+            this._activeCamera = this.cameras[(index - 1 + this.cameras.length) % this.cameras.length];
         }
     }
 }

@@ -1,8 +1,8 @@
 import { IModelManagerClass, type TsModels } from "./interfaces/TsModels";
-import { hash } from "node:crypto";
 import ObjFileParser from "obj-file-parser";
-import { readFile } from "node:fs/promises";
+import fs from "vite-plugin-fs/browser";
 import type { Vec3, VecTexture } from "./interfaces/common";
+import { hash } from "./utils";
 
 function convertObjFile(parsedContent: ObjFileParser.ObjFile): TsModels.ObjFile {
     return {
@@ -30,9 +30,9 @@ class ModelManagerClass extends IModelManagerClass {
     }
 
     loadModelFromFile: (file: string) => Promise<string> = async (file: string): Promise<string> => {
-        const hashedFile: string = hash('sha256', file);
+        const hashedFile: string = hash(file);
     
-        const fileContent: string = await readFile(file, { encoding: 'utf-8' });
+        const fileContent: string = await fs.readFile(file);
     
         const parsedContent: ObjFileParser.ObjFile = new ObjFileParser(fileContent, hashedFile).parse();
     
@@ -41,6 +41,14 @@ class ModelManagerClass extends IModelManagerClass {
         this.models.set(hashedFile, vec4Content);
     
         return hashedFile;
+    }
+
+    loadModelFromJSObject: (jsobject: TsModels.ObjFile) =>string = (jsobject: TsModels.ObjFile): string => {
+        const hashedJSObject: string = hash(jsobject.models[0].name);
+    
+        this.models.set(hashedJSObject, jsobject);
+    
+        return hashedJSObject;
     }
 
     getModelWithHash: (hash: string) => TsModels.ObjFile = (hash: string): TsModels.ObjFile => {

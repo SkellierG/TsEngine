@@ -31,6 +31,7 @@ export declare namespace TsModels {
 export abstract class IModelManagerClass {
     protected abstract models: Map<string, TsModels.ObjFile>;
     abstract loadModelFromFile: (file: string)=>Promise<string>;
+    abstract loadModelFromJSObject: (jsobject: TsModels.ObjFile)=>string;
     abstract getModelWithHash: (hash: string)=>TsModels.ObjFile;
     abstract getAllModels: ()=>TsModels.ObjFile[]
 }

@@ -1,11 +1,8 @@
-import { Matrix3x3ToMatrix4x4, Matrix3x3xMatrix3x3, Matrix4x4xMatrix4x4 } from "types/utils";
 import type { Matrix4x4, Vec3 } from "./common";
-import type { TsModels } from "./TsModels";
-import { TransformVec3, TransformVec4 } from "types/trasform";
-import type { Entity } from "types/core";
 
 export interface EntityProps {
-    model: string;
+    id?: string;
+    model?: string;
     position?: Vec3;
     rotation?: Vec3;
     scale?: Vec3;
@@ -15,7 +12,8 @@ export interface EntityProps {
 }
 
 export interface EntityClass {
-    model: string;
+    id: string;
+    model?: string;
     position: Vec3;
     rotation: Vec3;
     scale: Vec3;
