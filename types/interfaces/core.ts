@@ -35,6 +35,8 @@ export interface CameraClass extends EntityClass {
     fov: number,
     far: number,
     near: number,
+    perspectiveMatrix: Matrix4x4,
+    computePerspectiveMatrix(): Matrix4x4,
 }
 
 export interface SceneProps {

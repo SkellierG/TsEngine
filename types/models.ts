@@ -1,25 +1,59 @@
 import { IModelManagerClass, type TsModels } from "./interfaces/TsModels";
-import ObjFileParser from "obj-file-parser";
+import ObjFileParser, { type Face, type ObjModel, type Vertex } from "obj-file-parser";
 import fs from "vite-plugin-fs/browser";
 import type { Vec3, VecTexture } from "./interfaces/common";
 import { hash } from "./utils";
 
 function convertObjFile(parsedContent: ObjFileParser.ObjFile): TsModels.ObjFile {
     return {
-        models: parsedContent.models.map((model) => ({
+        models: parsedContent.models.map((model: ObjModel) => ({
             name: model.name,
-            vertices: model.vertices.map((vertex) => ({ ...vertex, w: 1 })),
+            vertices: model.vertices.map((vertex: Vertex) => ({ ...vertex, w: 1 })),
             textureCoords: model.textureCoords as VecTexture[],
             vertexNormals: model.vertexNormals as Vec3[],
-            faces: model.faces.map((face) => ({
-                ...face,
-                vertices: face.vertices as TsModels.VecFace[],
-            })),
+            faces: convertVecFace(model.faces),
         })),
         materialLibraries: parsedContent.materialLibraries,
     };
 }
 
+function convertVecFace(faces: Face[]): TsModels.Face[] {
+    const result: TsModels.Face[] = [];
+
+    faces.forEach((face: Face) => {
+        const numVertices: number = face.vertices.length;
+
+        if (numVertices < 3) return;
+
+        for (let i = 1; i < numVertices - 1; i++) {
+            const triangle: TsModels.Face = {
+                material: face.material,
+                group: face.group,
+                smoothingGroup: face.smoothingGroup,
+                vertices: [
+                    {
+                        vertexIndex: face.vertices[0].vertexIndex - 1,
+                        textureCoordsIndex: face.vertices[0].textureCoordsIndex,
+                        vertexNormalIndex: face.vertices[0].vertexNormalIndex
+                    },
+                    {
+                        vertexIndex: face.vertices[i].vertexIndex - 1,
+                        textureCoordsIndex: face.vertices[i].textureCoordsIndex,
+                        vertexNormalIndex: face.vertices[i].vertexNormalIndex
+                    },
+                    {
+                        vertexIndex: face.vertices[i + 1].vertexIndex - 1,
+                        textureCoordsIndex: face.vertices[i + 1].textureCoordsIndex,
+                        vertexNormalIndex: face.vertices[i + 1].vertexNormalIndex
+                    }
+                ]
+            };
+            result.push(triangle);
+        }
+    });
+
+    return result;
+}
 
 class ModelManagerClass extends IModelManagerClass {
     protected models: Map<string, TsModels.ObjFile>;
@@ -37,6 +71,8 @@ class ModelManagerClass extends IModelManagerClass {
         const parsedContent: ObjFileParser.ObjFile = new ObjFileParser(fileContent, hashedFile).parse();
     
         const vec4Content: TsModels.ObjFile = convertObjFile(parsedContent);
+
+        console.log(vec4Content);
     
         this.models.set(hashedFile, vec4Content);
     

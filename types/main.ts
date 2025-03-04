@@ -1,6 +1,7 @@
 //@ts-ignore
 import { Camera, Entity, Scene } from "./core";
 import type { Matrix4x4, TriVec4 } from "./interfaces/common";
+import type { CameraClass } from "./interfaces/core";
 import type { TsModels } from "./interfaces/TsModels";
 import { cubeModel, ModelManager } from "./models";
 import { Matrix4x4Util } from "./utils";
@@ -20,18 +21,25 @@ const CONSTANTS: {
 //const cubemodel = await ModelManager.loadModelFromFile(require());
 
 const cubeModelHash: string = ModelManager.loadModelFromJSObject(cubeModel);
+const teapotModelHash: string = await ModelManager.loadModelFromFile("./models/FinalBaseMesh.obj")
+console.log(ModelManager.getModelWithHash(teapotModelHash))
 const camerauuid: string = crypto.randomUUID();
 
 const Scenes: Scene[] = [
-    new Scene({
+    Scene.createScene({
         entities: [
-            new Entity({
-                model: cubeModelHash,
+            // Entity.createEntity({
+            //     model: cubeModelHash,
+            //     scale: {x:1, y:1, z:1},
+            //     reflection: {x:false, y:true, z:false},
+            //     position: {x:-70, y:-20, z:1}
+            // }),
+            Entity.createEntity({
+                model: teapotModelHash,
                 scale: {x:0.5, y:0.5, z:0.5},
-                reflection: {x:false, y:true, z:false},
-                //position: {x:0.9, y:0.9, z:0.9}
+                position: {x:-100, y:-100, z:0}
             }),
-            new Camera({
+            Camera.createCamera({
                 id: camerauuid,
             })
         ],
@@ -49,7 +57,7 @@ function render(): void {
 
     //console.log("Scenes[ACTIVE_SCENE]", Scenes[ACTIVE_SCENE])
 
-    const camera = Scenes[ACTIVE_SCENE].getEntityById(Scenes[ACTIVE_SCENE].activeCamera);
+    const camera: Camera | undefined = Scenes[ACTIVE_SCENE].getEntityById(Scenes[ACTIVE_SCENE].activeCamera) as Camera;
 
     if (!camera) return;
 
@@ -63,12 +71,12 @@ function render(): void {
         if (!entity.model) return;
 
         //@ts-ignore
-        console.log(entity.scale)
-        console.log(entity.rotation)
-        entity.rotation = {x: angleofrotationtest, y: angleofrotationtest, z: angleofrotationtest};
-        angleofrotationtest = angleofrotationtest + Math.PI/1024;
+        //console.log(entity.scale)
+        //console.log(entity.rotation)
+        entity.rotation = {x: angleofrotationtest, y: angleofrotationtest , z: angleofrotationtest};
+        angleofrotationtest = angleofrotationtest + Math.PI/16;
         if(angleofrotationtest > 2*Math.PI) angleofrotationtest = 0
-        console.log(angleofrotationtest);
+        //console.log(angleofrotationtest);
 
         const worldMatrix = entity.computeModelMatrix();
         
@@ -76,7 +84,7 @@ function render(): void {
 
         const model = ModelManager.getModelWithHash(entity.model);
 
-        if (model) renderModel(model, finalMatrix);
+        if (model) renderModel(model, finalMatrix, camera.perspectiveMatrix);
     });
 }
 
@@ -93,10 +101,13 @@ function applyTransformation(model: TsModels.ObjFile, transformMatrix: Matrix4x4
     return transformedModel;
 }
 
-function drawTriangles(models: TsModels.ObjFile["models"], transformMatrix: Matrix4x4): void {
+function drawTriangles(models: TsModels.ObjFile["models"], perspectiveMatrix: Matrix4x4): void {
     models.forEach((model) => {
+        //console.log("model", model)
         model.faces.forEach((face: TsModels.Face) => {
+            //console.log("face", face)
             const selectedTriangle: TsModels.VecFace[] = face.vertices;
+            //console.log("selectedTriangle", selectedTriangle)
 
             const triangle: TriVec4 = [
                 model.vertices[selectedTriangle[0].vertexIndex],
@@ -104,11 +115,22 @@ function drawTriangles(models: TsModels.ObjFile["models"], transformMatrix: Matr
                 model.vertices[selectedTriangle[2].vertexIndex]
             ];
 
+            //console.log("triangle", triangle)
+
+            //projection matrix (actually NO)
             const screenCoords: [number, number][] = triangle.map(vertex => {
-                const screenX = (vertex.x + 1) * (CONSTANTS.width / 3);
-                const screenY = (1 - vertex.y) * (CONSTANTS.height / 3);
+                //console.log("vertex", vertex)
+                // const screenX = ((vertex.x) + 1) * (CONSTANTS.width / 3);
+                // const screenY = (1 - (vertex.y)) * (CONSTANTS.height / 3);
+                // const screenX = ((vertex?.x ?? 0) + 1) * (CONSTANTS.width / 3);
+                // const screenY = (1 - (vertex?.y ?? 0)) * (CONSTANTS.height / 3);
+                const perpectiveVertex = Matrix4x4Util.vec4(vertex, perspectiveMatrix);
+                const screenX = perpectiveVertex.x;
+                const screenY = perpectiveVertex.y;
                 return [screenX, screenY];
             });
+
+            //console.log(screenCoords);
 
             ctx.beginPath();
             ctx.strokeStyle = "white";
@@ -121,10 +143,10 @@ function drawTriangles(models: TsModels.ObjFile["models"], transformMatrix: Matr
     });
 }
 
-function renderModel(FullModel: TsModels.ObjFile, transformMatrix: Matrix4x4): void {
+function renderModel(FullModel: TsModels.ObjFile, transformMatrix: Matrix4x4, perspectiveMatrix: Matrix4x4): void {
     const transformedModel = applyTransformation(FullModel, transformMatrix);
 
-    drawTriangles(transformedModel.models, transformMatrix);
+    drawTriangles(transformedModel.models, perspectiveMatrix);
 }
 
 let isRunnning: boolean = true;

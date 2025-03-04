@@ -13,7 +13,18 @@ export class Entity implements EntityClass {
     protected _shear: Vec3;
     protected _modelMatrix: Matrix4x4;
 
-    constructor(props: EntityProps) {
+    protected constructor(entity?: EntityClass) {
+        this._id = entity?.id ?? "";
+        this._model = entity?.model ?? "";
+        this._position = entity?.position ?? { x:0, y:0, z:0 };
+        this._rotation = entity?.rotation ?? { x:0, y:0, z:0 };
+        this._scale = entity?.scale ?? { x:0, y:0, z:0 };
+        this._reflection = entity?.reflection ?? { x:false, y:false, z: false };
+        this._shear = entity?.shear ?? { x:0, y:0, z:0 };
+        this._modelMatrix = entity?.modelMatrix ?? [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+    }
+
+    static createEntity(props: EntityProps): Entity {
         const {
             id = crypto.randomUUID(),
             model,
@@ -25,14 +36,18 @@ export class Entity implements EntityClass {
             shear = { x: 0, y: 0, z: 0 }
         } = props;
 
-        this._id = id;
-        this._model = model;
-        this._position = position;
-        this._rotation = rotation;
-        this._scale = scale;
-        this._reflection = reflection;
-        this._shear = shear;
-        this._modelMatrix = this.computeModelMatrix();
+        const newEntity = new Entity();
+
+        newEntity._id = id;
+        newEntity._model = model;
+        newEntity._position = position;
+        newEntity._rotation = rotation;
+        newEntity._scale = scale;
+        newEntity._reflection = reflection;
+        newEntity._shear = shear;
+        newEntity._modelMatrix = newEntity.computeModelMatrix();
+
+        return newEntity;
     }
 
     get id(): string {
@@ -104,19 +119,32 @@ export class Camera extends Entity implements CameraClass {
     protected _fov: number;
     protected _far: number;
     protected _near: number;
+    protected _perspectiveMatrix: Matrix4x4;
 
-    constructor(props: CameraProps) {
-        super(props);
+    protected constructor(entity: EntityClass) {
+        super(entity);
+        this._fov = 0
+        this._near = 0
+        this._far = 0
+        this._perspectiveMatrix = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+    }
 
+    static createCamera(props: CameraProps): Camera {
         const {
             fov = 75,
             near = 0.1,
             far = 1000
         } = props;
 
-        this._fov = fov;
-        this._near = near;
-        this._far = far;
+        const baseEntity = Camera.createEntity(props);
+        const newCamera = new Camera(baseEntity);
+
+        newCamera._fov = fov;
+        newCamera._near = near;
+        newCamera._far = far;
+        newCamera._perspectiveMatrix = newCamera.computePerspectiveMatrix();
+
+        return newCamera;
     }
 
     get fov(): number {
@@ -139,6 +167,20 @@ export class Camera extends Entity implements CameraClass {
     set far(distance: number) {
         this._far = distance;
     }
+
+    get perspectiveMatrix(): Matrix4x4 {
+        return this._perspectiveMatrix;
+    }
+    computePerspectiveMatrix(): Matrix4x4 {
+        const scale = 1 / Math.tan(this.fov * 0.5);
+
+        this._perspectiveMatrix = [[scale,0,0,0],
+                                   [0,scale,0,0],
+                                   [0,0,-this.far / (this.far - this.near),-this.far * this.near / (this.far - this.near)],
+                                   [0,0,-1,0]];
+
+        return this._perspectiveMatrix;
+    }
 }
 
 
@@ -147,20 +189,27 @@ export class Scene implements SceneClass {
     protected _cameras: Map<string, boolean>;
     protected _activeCamera: string;
 
-    constructor(props: SceneProps) {
-        const { entities = [], cameras = [], activeCamera = "" } = props;
-
+    protected constructor() {
         this._entities = new Map();
         this._cameras = new Map();
+        this._activeCamera = "";
+    }
 
-        this.addEntity(...entities);
-        this.addCamera(...cameras);
+    static createScene(props: SceneProps): Scene {
+        const { entities = [], cameras = [], activeCamera = "" } = props;
+
+        const newScene = new Scene();
+
+        newScene.addEntity(...entities);
+        newScene.addCamera(...cameras);
 
         if(activeCamera !== "") {
-            this._activeCamera = this._cameras.has(activeCamera) ? activeCamera : cameras[0] || "";
+            newScene._activeCamera = newScene._cameras.has(activeCamera) ? activeCamera : cameras[0] || "";
         } else {
-            this._activeCamera = cameras.includes(activeCamera) ? activeCamera : cameras[0] || "";
+            newScene._activeCamera = cameras.includes(activeCamera) ? activeCamera : cameras[0] || "";
         }
+
+        return newScene;
     }
 
     get entities(): EntityClass[] {
